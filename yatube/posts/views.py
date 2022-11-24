@@ -11,7 +11,7 @@ TOP_TEN = 10
 
 @cache_page(20)
 def index(request):
-    posts = Post.objects.all().order_by('-pub_date')
+    posts = Post.objects.all()
     page_obj = paginations(request, posts)
     context = {
         'page_obj': page_obj,
@@ -34,9 +34,8 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.posts.all()
     page_obj = paginations(request, posts)
-    following = request.user.is_authenticated
-    if following:
-        following = author.following.filter(user=request.user).exists()
+    following = request.user.is_authenticated and Follow.objects.filter(
+        user=request.user, author=author).exists()
     context = {
         'page_obj': page_obj,
         'author': author,
@@ -48,11 +47,9 @@ def profile(request, username):
 def post_detail(request, post_id):
     post = get_object_or_404(Post, pk=post_id)
     form = CommentForm()
-    post_detail = post.text[:30]
     comments = post.comments.all()
     context = {
         "post": post,
-        "post_detail": post_detail,
         "form": form,
         "comments": comments
     }
@@ -85,18 +82,18 @@ def post_edit(request, post_id):
         request.POST or None,
         files=request.FILES or None,
         instance=post)
-    if request.user == post.author:
-        if request.method == "POST" and form.is_valid:
-            post = form.save()
-            return redirect("posts:post_detail", post_id)
-        context = {
-            "form": form,
-            "groups": groups,
-            "is_edit": True,
-            "post": post,
-        }
-        return render(request, "posts/create_post.html", context)
-    return redirect("posts:post_detail", post_id)
+    if request.user != post.author:
+        return redirect("posts:post_detail", post_id)
+    if form.is_valid():
+        post = form.save()
+        return redirect("posts:post_detail", post_id)
+    context = {
+        "form": form,
+        "groups": groups,
+        "is_edit": True,
+        "post": post,
+    }
+    return render(request, "posts/create_post.html", context)
 
 
 @login_required
@@ -139,7 +136,8 @@ def profile_follow(request, username):
 def profile_unfollow(request, username):
     """Oтписка"""
     author = get_object_or_404(User, username=username)
-    Follow.objects.filter(user=request.user, author=author).delete()
+    if Follow.objects.filter(user=request.user, author=author).exists():
+        Follow.objects.filter(user=request.user, author=author).delete()
     return redirect('posts:profile', username)
 
 
