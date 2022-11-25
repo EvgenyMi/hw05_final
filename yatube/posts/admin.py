@@ -17,15 +17,13 @@ class PostAdmin(admin.ModelAdmin):
     empty_value_display = '-пусто-'
 
 
-admin.site.register(Post, PostAdmin)
-admin.site.register(Group)
-admin.site.register(Follow)
-
-
 class CommentAdmin(admin.ModelAdmin):
     list_display = ('pk', 'text', 'created', 'author', 'post')
     search_fields = ('text',)
     list_filter = ('created',)
 
 
+admin.site.register(Post, PostAdmin)
+admin.site.register(Group)
+admin.site.register(Follow)
 admin.site.register(Comment, CommentAdmin)
